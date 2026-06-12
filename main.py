@@ -3,20 +3,24 @@ import argparse
 import jax
 import jax.numpy as jnp
 import numpy as np
-from src.data import generate_synthetic_data, get_train_val_test_splits
+from src.data import generate_synthetic_data, load_jena_climate, get_train_val_test_splits
 from src.model import ProbabilisticForecaster
 from src.train import create_train_state, make_epoch_step_fn, make_eval_step_fn
 from src.evaluate import unscale_predictions, calculate_metrics
 from src.visualize import plot_fan_chart, plot_calibration_curve
 
-def run_project1(num_epochs=15, batch_size=32, lr=1e-3, seed=42):
+def run_project1(num_epochs=15, batch_size=32, lr=1e-3, seed=42, use_real_data=False):
     print("=" * 60)
     print("Starting Project 1: Probabilistic Time-Series Forecasting")
     print("=" * 60)
     
-    # 1. Generate and split synthetic data
-    print("Generating synthetic store sales data...")
-    df = generate_synthetic_data(num_series=12, num_days=365 * 3, seed=seed)
+    # 1. Load data
+    if use_real_data:
+        print("Loading real Jena Climate dataset...")
+        df = load_jena_climate(seed=seed)
+    else:
+        print("Generating synthetic store sales data...")
+        df = generate_synthetic_data(num_series=12, num_days=365 * 3, seed=seed)
     
     lookback = 30
     horizon = 7
@@ -121,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=15, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=32, help="Mini-batch size")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    parser.add_argument("--real-data", action="store_true", help="Use real Jena Climate dataset instead of synthetic data")
     args = parser.parse_args()
     
-    run_project1(num_epochs=args.epochs, batch_size=args.batch_size, lr=args.lr)
+    run_project1(num_epochs=args.epochs, batch_size=args.batch_size, lr=args.lr, use_real_data=args.real_data)

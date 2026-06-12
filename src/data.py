@@ -55,6 +55,63 @@ def generate_synthetic_data(num_series=10, num_days=365 * 3, seed=42):
         
     return pd.concat(all_data, ignore_index=True)
 
+def load_jena_climate(resample_freq='6h', seed=42):
+    """
+    Loads the Jena Climate dataset (real weather time-series data).
+    Source: Max Planck Institute for Biogeochemistry.
+    Features: Temperature, Pressure, Humidity, Wind, etc.
+    Resolution: Originally 10-min intervals, resampled to 6-hour blocks.
+    """
+    import urllib.request
+    import zipfile
+    import os
+
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+    os.makedirs(cache_dir, exist_ok=True)
+    csv_path = os.path.join(cache_dir, 'jena_climate_2009_2016.csv')
+
+    if not os.path.exists(csv_path):
+        print("Downloading Jena Climate dataset...")
+        url = 'https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip'
+        zip_path = os.path.join(cache_dir, 'jena_climate.zip')
+        urllib.request.urlretrieve(url, zip_path)
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            z.extractall(cache_dir)
+        os.remove(zip_path)
+        print("Download complete.")
+
+    df = pd.read_csv(csv_path)
+    df['Date Time'] = pd.to_datetime(df['Date Time'], format='%d.%m.%Y %H:%M:%S')
+    df = df.set_index('Date Time')
+
+    # Resample to reduce granularity (10-min -> 6-hour means)
+    df = df.resample(resample_freq).mean().dropna()
+
+    # We'll forecast 'T (degC)' (temperature) as the target series
+    # Create multiple "series" from different weather variables for multi-series forecasting
+    # We'll treat each column as a separate univariate series
+    target_col = 'T (degC)'
+
+    # Build a DataFrame matching the synthetic data format
+    all_data = []
+    # Use temperature and 3 other key variables as separate series
+    series_cols = ['T (degC)', 'p (mbar)', 'rh (%)', 'wv (m/s)']
+
+    for i, col in enumerate(series_cols):
+        series_df = pd.DataFrame({
+            'date': df.index,
+            'series_id': f'weather_{col.split(" ")[0]}',
+            'sales': df[col].values,  # reuse 'sales' column name to match the existing contract
+            'day_of_week': df.index.dayofweek,
+            'month': df.index.month,
+            'day_of_year': df.index.dayofyear,
+            'is_event': 0.0  # no events in weather data
+        })
+        all_data.append(series_df)
+
+    result = pd.concat(all_data, ignore_index=True)
+    return result
+
 def create_sliding_windows(df, lookback=30, horizon=7):
     """
     Creates lookback windows and targets for all time series.
@@ -132,3 +189,62 @@ def get_train_val_test_splits(df, lookback=30, horizon=7, val_ratio=0.15, test_r
     X_test, y_test = create_sliding_windows(test_df, lookback, horizon)
     
     return (X_train, y_train), (X_val, y_val), (X_test, y_test)
+
+
+def load_jena_climate(resample_freq='6h', seed=42):
+    """
+    Loads the Jena Climate dataset (real weather time-series data).
+    Source: Max Planck Institute for Biogeochemistry.
+    Features: Temperature, Pressure, Humidity, Wind, etc.
+    Resolution: Originally 10-min intervals, resampled to 6-hour blocks.
+    """
+    import urllib.request
+    import zipfile
+    import os
+    import pandas as pd
+    import numpy as np
+    
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+    os.makedirs(cache_dir, exist_ok=True)
+    csv_path = os.path.join(cache_dir, 'jena_climate_2009_2016.csv')
+    
+    if not os.path.exists(csv_path):
+        print("Downloading Jena Climate dataset...")
+        url = 'https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip'
+        zip_path = os.path.join(cache_dir, 'jena_climate.zip')
+        urllib.request.urlretrieve(url, zip_path)
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            z.extractall(cache_dir)
+        os.remove(zip_path)
+        print("Download complete.")
+    
+    df = pd.read_csv(csv_path)
+    df['Date Time'] = pd.to_datetime(df['Date Time'], format='%d.%m.%Y %H:%M:%S')
+    df = df.set_index('Date Time')
+    
+    # Resample to reduce granularity (10-min -> 6-hour means)
+    df = df.resample(resample_freq).mean().dropna()
+    
+    # We'll forecast 'T (degC)' (temperature) as the target series
+    # Create multiple "series" from different weather variables for multi-series forecasting
+    # We'll treat each column as a separate univariate series
+    
+    # Build a DataFrame matching the synthetic data format
+    all_data = []
+    # Use temperature and 3 other key variables as separate series
+    series_cols = ['T (degC)', 'p (mbar)', 'rh (%)', 'wv (m/s)']
+    
+    for i, col in enumerate(series_cols):
+        series_df = pd.DataFrame({
+            'date': df.index,
+            'series_id': f'weather_{col.split(" ")[0]}',
+            'sales': df[col].values,  # reuse 'sales' column name to match the existing contract
+            'day_of_week': df.index.dayofweek,
+            'month': df.index.month,
+            'day_of_year': df.index.dayofyear,
+            'is_event': 0.0  # no events in weather data
+        })
+        all_data.append(series_df)
+    
+    result = pd.concat(all_data, ignore_index=True)
+    return result

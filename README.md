@@ -37,7 +37,7 @@ $$\mathcal{L}_{\text{crossing}} = \lambda \sum_{k=1}^{K-1} \max(0, \hat{y}_{q_{k
 
 ## 📊 Verification & Results
 
-Running the model on synthetic store sales data (modeling weekly seasonal trends and holiday events) yields the following performance metrics on the unseen test set:
+Running the model on synthetic store sales data (modeling weekly seasonal trends and holiday events) — or on the real **Jena Climate** dataset — yields the following performance metrics on the unseen test set:
 
 - **Continuous Ranked Probability Score (CRPS)**: `0.4827` (measures overall calibration of the predicted probability distribution).
 - **Quantile Crossing Rate**: `0.03%` (proving the non-crossing penalty successfully enforces interval ordering).
@@ -54,12 +54,13 @@ The execution saves two plots in the `results/` folder:
 
 ```text
 ├── src/
-│   ├── data.py         # Synthetic store sales data generator and windowing
+│   ├── data.py         # Data loaders (synthetic + real Jena Climate) and windowing
 │   ├── losses.py       # Pinball loss, crossing penalty, and CRPS formulas
 │   ├── model.py        # Custom Linear Transformer and Causal Attention
 │   ├── train.py        # JIT-compiled training loops via jax.lax.scan
 │   ├── evaluate.py     # Evaluation metrics (CRPS, PICP, MPIW, Winkler)
 │   └── visualize.py    # Matplotlib fan chart and calibration plot generators
+├── data/               # Auto-downloaded datasets (gitignored)
 ├── results/            # Output directory for evaluation plots
 ├── main.py             # Entrypoint script for training and evaluation
 ├── pyproject.toml      # Project configuration and dependency specifications
@@ -82,12 +83,27 @@ uv pip install -r requirements.txt
 ```
 
 ### Run Training and Evaluation
-To execute the pipeline and generate predictions:
+To execute the pipeline with **synthetic data** (default):
 ```bash
 python main.py --epochs 15
+```
+
+To train on the **real Jena Climate dataset** (auto-downloaded on first run):
+```bash
+python main.py --real-data --epochs 15
 ```
 
 You can adjust training parameters:
 ```bash
 python main.py --epochs 30 --batch_size 64 --lr 0.0005
 ```
+
+---
+
+## 🌡️ Real Dataset: Jena Climate
+
+The `--real-data` flag loads the [Jena Climate dataset](https://www.bgc-jena.mpg.de/wetter/) from the Max Planck Institute for Biogeochemistry. It contains 14 weather features recorded every 10 minutes from 2009–2016. The loader:
+
+- **Resamples** the 10-minute data to 6-hour means to reduce granularity.
+- **Creates 4 weather series** (Temperature, Pressure, Humidity, Wind Speed) formatted identically to the synthetic store sales data.
+- **Caches** the downloaded CSV in `data/` (gitignored) so subsequent runs are instant.
