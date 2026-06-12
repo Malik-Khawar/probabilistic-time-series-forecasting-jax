@@ -1,0 +1,14 @@
+[project]
+name = "project1_timeseries_forecasting"
+version = "0.1.0"
+description = "Probabilistic Time-Series Forecasting with JAX/Flax"
+requires-python = ">=3.14"
+dependencies = [
+    "jax",
+    "jaxlib",
+    "flax",
+    "optax",
+    "numpy",
+    "pandas",
+    "matplotlib",
+]
